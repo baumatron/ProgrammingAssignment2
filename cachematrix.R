@@ -55,3 +55,83 @@ cacheSolve <- function(x, ...)
     x$setInverse( solve(x$get(), ...) )
     x$getInverse()
 }
+
+
+# Unit tests for the matrix caching code above
+# To run tests, call runTests()
+testCacheMatrixAndSolve <- function()
+{
+    testMatrix <- matrix(c(2, -3, -2, 0, 0, -1, -1, 2, 0), 3, 3)
+    testMatrix2 <- matrix(c(1, 4, -2, 0, 0, -1, -1, 2, 0), 3, 3)
+    expectedInvertedMatrix <- matrix(c(2, -4, 3, 1, -2, 2, 0, -1, 0), 3, 3)
+    
+    cacheMatrix <- makeCacheMatrix(testMatrix2)
+    
+    if (!identical(testMatrix2, cacheMatrix$get()))
+    {
+        message("UNEXPECTED: Got unexpected matrix from get accessor after cache matrix initialization")
+        return(FALSE)
+    }
+    
+    # Test the set accessor by assigning a different matrix
+    cacheMatrix$set(testMatrix)
+    
+    if (!identical(testMatrix, cacheMatrix$get()))
+    {
+        message("UNEXPECTED: Got unexpected matrix from get accessor after setting matrix using set accessor")
+        return(FALSE)
+    }
+    
+    # Haven't yet solved the matrix, so cache should be NULL
+    if (!is.null(cacheMatrix$getInverse()))
+    {
+        message("UNEXPECTED: Cached matrix should be NULL because it hasn't been solved yet")
+        return(FALSE)
+    }
+    
+    # Solve the matrix and cache the value
+    actual <- cacheSolve(cacheMatrix)
+    if (!isTRUE(all.equal(expectedInvertedMatrix, actual)))
+    {
+        message("UNEXPECTED: Got unexpected inverted matrix from cacheSolve")
+        message("Actual:")
+        print(actual)
+        message("Expected:")
+        print(expectedInvertedMatrix)
+        message("Original matrix:")
+        print(cacheMatrix$get())
+        return(FALSE)
+    }
+    
+    ## Try again to get the cached version
+    cached <- cacheSolve(cacheMatrix)
+    if (!identical(cached, actual))
+    {
+        message("UNEXPECTED: Cached matrix should be identical to the previously returned solution")
+        return(FALSE)
+    }
+    
+    ## Assign a new matrix value and test to make sure the cache is set to NULL
+    cacheMatrix$set(testMatrix2)
+    if (!is.null(cacheMatrix$getInverse()))
+    {
+        message("UNEXPECTED: Got cached inverse matrix but should have been NULL")
+        return(FALSE)
+    }
+    
+    return(TRUE)
+}
+
+runTests <- function()
+{
+    message("Running testCacheMatrixAndSolve...")
+    if (FALSE == testCacheMatrixAndSolve())
+    {
+        message("FAILED")
+    }
+    else
+    {
+        message("PASSED")
+    }
+    
+}
